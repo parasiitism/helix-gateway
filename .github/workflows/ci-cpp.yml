@@ -1,0 +1,145 @@
+# ═══════════════════════════════════════════════════════════════
+#  Helix C++ CI — build + test on every push / PR
+# ═══════════════════════════════════════════════════════════════
+
+name: ci-cpp
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data-plane/**'
+      - '.github/workflows/ci-cpp.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data-plane/**'
+      - '.github/workflows/ci-cpp.yml'
+
+# Cancel previous runs on the same PR/branch when a new commit arrives
+concurrency:
+  group: ci-cpp-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
+
+jobs:
+  build:
+    name: Build · ${{ matrix.os }} · ${{ matrix.compiler }} · ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:         [ubuntu-24.04]
+        compiler:   [gcc, clang]
+        build_type: [Release, Debug]
+        include:
+          - compiler: gcc
+            cc: gcc-13
+            cxx: g++-13
+          - compiler: clang
+            cc: clang-18
+            cxx: clang++-18
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config \
+            curl zip unzip tar git
+
+      - name: Setup vcpkg cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL',  process.env.ACTIONS_CACHE_URL  || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '2024.10.21'
+
+      - name: Configure
+        env:
+          CC:  ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S data-plane -B data-plane/build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: cmake --build data-plane/build --parallel
+
+      - name: Smoke test (boots and answers /healthz)
+        run: |
+          ./data-plane/build/helix-gateway &
+          PID=$!
+          sleep 3
+          curl --fail --max-time 5 http://localhost:8080/healthz
+          curl --fail --max-time 5 http://localhost:8080/version
+          kill $PID
+
+  sanitizers:
+    name: Sanitizers · ASan + UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build clang-18
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '2024.10.21'
+
+      - name: Configure with sanitizers
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: |
+          cmake -S data-plane -B data-plane/build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DHELIX_ENABLE_ASAN=ON \
+            -DHELIX_ENABLE_UBSAN=ON \
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: cmake --build data-plane/build --parallel
+
+      - name: Smoke test under sanitizers
+        run: |
+          ASAN_OPTIONS=detect_leaks=1 \
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
+          ./data-plane/build/helix-gateway &
+          PID=$!
+          sleep 3
+          curl --fail http://localhost:8080/healthz
+          kill -SIGTERM $PID
+          wait $PID
+
+  lint:
+    name: Lint · clang-format + clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-18 clang-tidy-18
+
+      - name: Check formatting
+        run: |
+          find data-plane/src data-plane/include -type f \
+            \( -name '*.cpp' -o -name '*.hpp' \) \
+            -exec clang-format-18 --dry-run --Werror {} +

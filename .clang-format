@@ -1,0 +1,37 @@
+# ═══════════════════════════════════════════════════════════════
+#  Helix C++ formatting — Google style with project tweaks
+# ═══════════════════════════════════════════════════════════════
+---
+Language:        Cpp
+BasedOnStyle:    Google
+Standard:        c++20
+
+ColumnLimit:     100
+IndentWidth:     4
+TabWidth:        4
+UseTab:          Never
+
+AccessModifierOffset: -2
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+BreakBeforeBraces: Attach
+SpaceBeforeParens: ControlStatements
+
+IncludeBlocks:    Regroup
+IncludeCategories:
+  - Regex:   '^<.*\.h>'      # C system headers
+    Priority: 1
+  - Regex:   '^<.*>'         # C++ system / lib headers
+    Priority: 2
+  - Regex:   '^"helix/.*"'   # project headers
+    Priority: 3
+  - Regex:   '.*'            # everything else
+    Priority: 4
+
+SortIncludes: CaseSensitive

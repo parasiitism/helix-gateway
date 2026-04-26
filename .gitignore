@@ -1,26 +1,103 @@
-# C++
+# ═══════════════════════════════════════════════════════════════
+#  Helix .gitignore
+# ═══════════════════════════════════════════════════════════════
+
+# ── C++ Build Artifacts ────────────────────────────────────────
 build/
+build-*/
 out/
+cmake-build-*/
 *.o
 *.obj
-compile_commands.json
-.cache/
-vcpkg_installed/
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.lib
+*.exp
+*.pdb
+*.ilk
 
-# Python
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+compile_commands.json
+.cmake/
+
+# vcpkg / Conan
+vcpkg_installed/
+.vcpkg-root
+conan.lock
+conanbuildinfo.*
+conaninfo.txt
+graph_info.json
+
+# ── Python ─────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.Python
 .venv/
-.env
+venv/
+env/
+ENV/
+.python-version
+
+# Testing & linting caches
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
 
-# IDE
+# Generated proto stubs
+*_pb2.py
+*_pb2_grpc.py
+*.pb.h
+*.pb.cc
+*.grpc.pb.h
+*.grpc.pb.cc
+
+# ── Secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── Editor / OS ────────────────────────────────────────────────
 .vscode/
+!.vscode/settings.json.example
+!.vscode/launch.json.example
 .idea/
 *.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
-# Build artifacts
+# ── Logs & runtime data ────────────────────────────────────────
 *.log
-results/raw/
+logs/
+data/
+tmp/
+benchmarks/results/raw/
+benchmarks/results/*/raw/
+
+# ── Docker / Helm ──────────────────────────────────────────────
+.helm/
+*.tgz
