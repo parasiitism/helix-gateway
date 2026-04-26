@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════
 #  Helix C++ formatting — Google style with project tweaks
 # ═══════════════════════════════════════════════════════════════
----
+----
 Language:        Cpp
 BasedOnStyle:    Google
 Standard:        c++20
